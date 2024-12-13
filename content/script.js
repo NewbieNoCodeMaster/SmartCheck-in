@@ -1,11 +1,11 @@
-alert('test')
-
 let students = JSON.parse(localStorage.getItem('students')) || [];
+let categories = JSON.parse(localStorage.getItem('categories')) || ['Default Category']; // Initialize with a default category
 let selectedStudentIndex = null;
 
 // Save data to localStorage
 function saveToLocalStorage() {
   localStorage.setItem('students', JSON.stringify(students));
+  localStorage.setItem('categories', JSON.stringify(categories)); // Save categories
 }
 
 // Render student table with filtering and search functionality
@@ -69,6 +69,7 @@ function addStudent(name, category) {
   });
   saveToLocalStorage();
   renderTable();
+  updateCategoryDropdown(); // Update category dropdown in the modal
 }
 
 // Mark attendance as present
@@ -122,12 +123,115 @@ document.getElementById('saveStudent').addEventListener('click', () => {
   const category = document.getElementById('modalCategory').value;
 
   if (name && category) {
+    // Add category if it doesn't exist
+    if (!categories.includes(category)) {
+      categories.push(category);
+      saveToLocalStorage();
+      updateTableCategoryDropdown(); // Update the table dropdown
+    }
     addStudent(name, category);
     const modal = bootstrap.Modal.getInstance(document.getElementById('addStudentModal'));
     modal.hide();
   }
 });
 
-// Initialize the table render
-renderTable();
+// Add category functionality
+function addCategory() {
+  const newCategory = document.getElementById('newCategory').value.trim();
+  if (newCategory) {
+    if (!categories.includes(newCategory)) {
+      categories.push(newCategory);
+      saveToLocalStorage();
+      updateCategoryDropdown();
+      updateTableCategoryDropdown();
+      document.getElementById('newCategory').value = ''; // Clear the input field
+    } else {
+      // Show a modal or alert for duplicate category
+      const modal = new bootstrap.Modal(document.getElementById('duplicateCategoryModal'));
+      modal.show();
+    }
+  }
+}
 
+// Event listener for the "Add Category" button
+document.getElementById('addCategoryButton').addEventListener('click', addCategory);
+
+// Delete category functionality
+function deleteCategory() {
+  const selectedCategory = document.getElementById('modalCategory').value;
+  if (selectedCategory) {
+    // Update the modal category dropdown before showing the modal
+    updateCategoryDropdown(); 
+    // Show the confirmation modal
+    const confirmModal = new bootstrap.Modal(document.getElementById('deleteCategoryConfirmModal'));
+    document.getElementById('confirmCategory').textContent = selectedCategory; // Set category in the modal
+    confirmModal.show(); // Display the modal
+  }
+}
+
+// Event listener for the "Confirm Delete" button in the modal
+document.getElementById('confirmDeleteCategory').addEventListener('click', () => {
+  const selectedCategory = document.getElementById('modalCategory').value; // Get category from dropdown again
+  const index = categories.indexOf(selectedCategory);
+  if (index > -1) {
+    categories.splice(index, 1); // Remove the category from the array
+    saveToLocalStorage();
+    updateCategoryDropdown();
+    updateTableCategoryDropdown();
+    // Optionally, reset the dropdown to the default value
+    
+    showNotification('Category deleted successfully!', 'success'); // Notify user
+  }
+  // Hide the confirmation modal
+  const confirmModal = bootstrap.Modal.getInstance(document.getElementById('deleteCategoryConfirmModal'));
+  confirmModal.hide();
+  document.getElementById('modalCategory').value = ''; // Reset dropdown after modal closes
+});
+
+
+
+// Update category dropdown in the modal
+function updateCategoryDropdown() {
+  const categoryDropdown = document.getElementById('modalCategory');
+  const currentSelection = categoryDropdown.value; // Store the current selection
+  categoryDropdown.innerHTML = ''; // Clear existing options
+
+  // Add default option
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.text = 'Select a category';
+  categoryDropdown.appendChild(defaultOption);
+
+  categories.forEach(category => {
+    const option = document.createElement('option');
+    option.value = category;
+    option.text = category;
+    categoryDropdown.appendChild(option);
+  });
+
+  categoryDropdown.value = currentSelection; // Restore the previously selected value
+}
+
+// Update category dropdown in the table
+function updateTableCategoryDropdown() {
+  const categoryDropdown = document.getElementById('filterCategory');
+  categoryDropdown.innerHTML = ''; // Clear existing options
+
+  // Add default option
+  const defaultOption = document.createElement('option');
+  defaultOption.value = '';
+  defaultOption.text = 'All Categories';
+  categoryDropdown.appendChild(defaultOption);
+
+  categories.forEach(category => {
+    const option = document.createElement('option');
+    option.value = category;
+    option.text = category;
+    categoryDropdown.appendChild(option);
+  });
+}
+
+// Initialize the table render and category dropdowns
+renderTable();
+updateCategoryDropdown();
+updateTableCategoryDropdown();
